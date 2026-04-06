@@ -34,8 +34,11 @@ public class OutputNodeExecutor implements NodeExecutor {
                     String mode = modeObj != null ? String.valueOf(modeObj) : "reference";
                     String value = String.valueOf(mapping.get("value"));
 
+                    log.info("OutputNode [{}] processing output mapping: name={}, mode={}, value={}", nodeId, name, mode, value);
+
                     if ("reference".equals(mode)) {
                         Object resolved = context.resolveReference(value);
+                        log.info("OutputNode [{}] resolved reference '{}' = {}", nodeId, value, resolved);
                         resolvedOutputs.put(name, resolved != null ? resolved : "");
                     } else {
                         resolvedOutputs.put(name, value);

@@ -29,6 +29,12 @@ E:\java\PaiAgent-One\paiagent-backend\src\main\java\com\paiagent\engine\llm\LLMR
 E:\java\PaiAgent-One\paiagent-backend\src\main\java\com\paiagent\engine\llm\MockLLMProvider.java
 E:\java\PaiAgent-One\paiagent-backend\src\main\java\com\paiagent\engine\NodeExecutor.java
 E:\java\PaiAgent-One\paiagent-backend\src\main\java\com\paiagent\engine\NodeExecutorRegistry.java
+E:\java\PaiAgent-One\paiagent-backend\src\main\java\com\paiagent\engine\tts\AliyunTTSProvider.java
+E:\java\PaiAgent-One\paiagent-backend\src\main\java\com\paiagent\engine\tts\MockTTSProvider.java
+E:\java\PaiAgent-One\paiagent-backend\src\main\java\com\paiagent\engine\tts\TTSProvider.java
+E:\java\PaiAgent-One\paiagent-backend\src\main\java\com\paiagent\engine\tts\TTSProviderFactory.java
+E:\java\PaiAgent-One\paiagent-backend\src\main\java\com\paiagent\engine\tts\TTSRequest.java
+E:\java\PaiAgent-One\paiagent-backend\src\main\java\com\paiagent\engine\tts\TTSResponse.java
 E:\java\PaiAgent-One\paiagent-backend\src\main\java\com\paiagent\engine\WorkflowEngine.java
 E:\java\PaiAgent-One\paiagent-backend\src\main\java\com\paiagent\execution\controller\ExecutionController.java
 E:\java\PaiAgent-One\paiagent-backend\src\main\java\com\paiagent\execution\dto\ExecutionRequest.java

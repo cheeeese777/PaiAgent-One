@@ -38,7 +38,7 @@ export default function NodeConfigPanel() {
         <LLMConfig nodeData={nodeData} allNodes={nodes} onUpdate={(data) => updateNodeData(selectedNode.id, data)} />
       )}
       {selectedNode.type === 'tool' && (
-        <ToolConfig nodeData={nodeData} onUpdate={(data) => updateNodeData(selectedNode.id, data)} />
+        <ToolConfig nodeData={nodeData} allNodes={nodes} onUpdate={(data) => updateNodeData(selectedNode.id, data)} />
       )}
       {selectedNode.type === 'output' && (
         <OutputConfig
@@ -352,7 +352,48 @@ function OutputParametersConfig({ nodeData, onUpdate }: { nodeData: NodeData; on
   );
 }
 
-function ToolConfig({ nodeData, onUpdate }: { nodeData: NodeData; onUpdate: (data: Partial<NodeData>) => void }) {
+function ToolConfig({ nodeData, allNodes, onUpdate }: { nodeData: NodeData; allNodes: Array<{ id: string; data: NodeData; type?: string }>; onUpdate: (data: Partial<NodeData>) => void }) {
+  const isVoiceSynthesis = nodeData.toolType === 'voice_synthesis' || nodeData.nodeKey === 'voice_synthesis';
+
+  // Build reference options from all upstream nodes (excluding output nodes)
+  const refOptions: string[] = [];
+  for (const node of allNodes) {
+    if (node.type === 'output') continue;
+    const label = (node.data as NodeData).label;
+    if (node.type === 'input') {
+      const varName = (node.data as NodeData).inputVariableName || 'user_input';
+      refOptions.push(`${label}.${varName}`);
+    }
+    if (node.type === 'llm') {
+      refOptions.push(`${label}.text`);
+    }
+    if (node.type === 'tool') {
+      refOptions.push(`${label}.audioUrl`);
+      refOptions.push(`${label}.text`);
+    }
+  }
+
+  const inputParams = nodeData.inputParameters || [
+    { name: 'text', parameterType: 'reference' as const, value: '' },
+    { name: 'voice', parameterType: 'input' as const, value: 'Cherry' },
+    { name: 'language_type', parameterType: 'input' as const, value: 'Auto' }
+  ];
+
+  const updateInputParam = (index: number, field: keyof InputParameter, value: string) => {
+    const updated = [...inputParams];
+    updated[index] = { ...updated[index], [field]: value };
+    onUpdate({ inputParameters: updated });
+  };
+
+  const addInputParam = () => {
+    onUpdate({ inputParameters: [...inputParams, { name: '', parameterType: 'reference' as const, value: '' }] });
+  };
+
+  const removeInputParam = (index: number) => {
+    const updated = inputParams.filter((_, i) => i !== index);
+    onUpdate({ inputParameters: updated.length > 0 ? updated : [{ name: '', parameterType: 'reference' as const, value: '' }] });
+  };
+
   return (
     <div className="space-y-4">
       <div>
@@ -361,20 +402,115 @@ function ToolConfig({ nodeData, onUpdate }: { nodeData: NodeData; onUpdate: (dat
           {nodeData.toolType || nodeData.nodeKey}
         </div>
       </div>
-      {nodeData.toolType === 'voice_synthesis' && (
+
+      {/* 超拟人音频合成专属配置 */}
+      {isVoiceSynthesis && (
         <>
           <div>
-            <label className="text-xs text-gray-500 block mb-1">音色</label>
-            <select
-              value={(nodeData.toolConfig as Record<string, string>)?.voice || 'narrator'}
-              onChange={(e) => onUpdate({ toolConfig: { ...nodeData.toolConfig, voice: e.target.value } })}
+            <label className="text-xs text-gray-500 block mb-1">API Key</label>
+            <input
+              type="password"
+              value={(nodeData.toolConfig as Record<string, string>)?.apiKey || ''}
+              onChange={(e) => onUpdate({ toolConfig: { ...nodeData.toolConfig, apiKey: e.target.value } })}
               className="w-full text-sm border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-400"
-            >
-              <option value="male-1">男声1</option>
-              <option value="female-1">女声1</option>
-              <option value="narrator">解说员</option>
-            </select>
+              placeholder="输入 API Key"
+            />
           </div>
+          <div>
+            <label className="text-xs text-gray-500 block mb-1">模型名称</label>
+            <input
+              type="text"
+              value={(nodeData.toolConfig as Record<string, string>)?.modelName || 'qwen3-tts-flash'}
+              onChange={(e) => onUpdate({ toolConfig: { ...nodeData.toolConfig, modelName: e.target.value } })}
+              className="w-full text-sm border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-400"
+              placeholder="qwen3-tts-flash"
+            />
+          </div>
+
+          {/* Input Parameters - 输入参数配置 */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-xs text-gray-500 font-medium">输入参数</label>
+              <button onClick={addInputParam} className="text-xs text-blue-500 hover:text-blue-600">+ 添加</button>
+            </div>
+            {inputParams.map((param, i) => (
+              <div key={i} className="flex gap-1.5 mb-2 items-start">
+                <div className="flex-1 space-y-1.5">
+                  <input
+                    value={param.name}
+                    onChange={(e) => updateInputParam(i, 'name', e.target.value)}
+                    className="w-full text-xs border border-gray-200 rounded px-1.5 py-1 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                    placeholder="参数名"
+                  />
+                  {/* voice 和 language_type 固定为 input 类型，不显示选择器 */}
+                  {param.name === 'voice' || param.name === 'language_type' ? (
+                    <>
+                      <input type="hidden" value="input" readOnly />
+                      {param.name === 'voice' ? (
+                        <select
+                          value={param.value || 'Cherry'}
+                          onChange={(e) => updateInputParam(i, 'value', e.target.value)}
+                          className="w-full text-xs border border-gray-200 rounded px-1.5 py-1 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                        >
+                          <option value="Cherry">Cherry</option>
+                          <option value="Serena">Serena</option>
+                          <option value="Ethan">Ethan</option>
+                        </select>
+                      ) : (
+                        <select
+                          value={param.value || 'Auto'}
+                          onChange={(e) => updateInputParam(i, 'value', e.target.value)}
+                          className="w-full text-xs border border-gray-200 rounded px-1.5 py-1 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                        >
+                          <option value="Auto">Auto</option>
+                        </select>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <select
+                        value={param.parameterType}
+                        onChange={(e) => updateInputParam(i, 'parameterType', e.target.value as 'input' | 'reference')}
+                        className="w-full text-xs border border-gray-200 rounded px-1 py-1 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                      >
+                        <option value="input">输入</option>
+                        <option value="reference">引用</option>
+                      </select>
+                      {param.parameterType === 'input' ? (
+                        <input
+                          value={param.value}
+                          onChange={(e) => updateInputParam(i, 'value', e.target.value)}
+                          className="w-full text-xs border border-gray-200 rounded px-1.5 py-1 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                          placeholder="手动输入值"
+                        />
+                      ) : (
+                        <select
+                          value={param.value}
+                          onChange={(e) => updateInputParam(i, 'value', e.target.value)}
+                          className="w-full text-xs border border-gray-200 rounded px-1 py-1 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                        >
+                          <option value="">选择引用</option>
+                          {refOptions.map((opt) => (
+                            <option key={opt} value={opt}>{opt}</option>
+                          ))}
+                        </select>
+                      )}
+                    </>
+                  )}
+                </div>
+                <button
+                  onClick={() => removeInputParam(i)}
+                  className="text-red-400 hover:text-red-600 px-1 py-1 text-xs"
+                  title="删除"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+
+          {/* Output Parameters - 输出参数配置 */}
+          <OutputParametersConfig nodeData={nodeData} onUpdate={onUpdate} />
         </>
       )}
     </div>

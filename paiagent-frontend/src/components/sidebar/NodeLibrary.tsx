@@ -24,7 +24,7 @@ export default function NodeLibrary() {
     {
       category: '工具节点',
       nodes: [
-        { id: 5, nodeKey: 'voice_synthesis', nodeType: 'TOOL', label: '超拟人音频合成', category: '工具节点', iconUrl: '', configSchema: '{}', defaultConfig: '{"toolType":"voice_synthesis","voice":"narrator","speed":1.0}' },
+        { id: 5, nodeKey: 'voice_synthesis', nodeType: 'TOOL', label: '超拟人音频合成', category: '工具节点', iconUrl: '', configSchema: '{}', defaultConfig: '{"toolType":"voice_synthesis","apiKey":"","modelName":"qwen3-tts-flash","inputParameters":[{"name":"text","parameterType":"reference","value":""},{"name":"voice","parameterType":"input","value":"Cherry"},{"name":"language_type","parameterType":"input","value":"Auto"}],"outputParameters":[{"name":"audioUrl","type":"string","description":"生成的音频URL"}]}' },
       ],
     },
   ];

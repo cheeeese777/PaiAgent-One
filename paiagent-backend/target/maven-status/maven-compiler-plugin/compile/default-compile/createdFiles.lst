@@ -18,6 +18,7 @@ com\paiagent\engine\NodeExecutor.class
 com\paiagent\execution\entity\WorkflowExecutionEntity.class
 com\paiagent\workflow\repository\WorkflowRepository.class
 com\paiagent\workflow\dto\WorkflowListDTO.class
+com\paiagent\engine\tts\TTSRequest.class
 com\paiagent\auth\dto\LoginRequest.class
 com\paiagent\engine\FlowParser$FlowNode.class
 com\paiagent\common\exception\GlobalExceptionHandler.class
@@ -25,9 +26,12 @@ com\paiagent\config\SecurityConfig.class
 com\paiagent\workflow\entity\WorkflowEntity.class
 com\paiagent\auth\dto\LoginResponse.class
 com\paiagent\execution\service\ExecutionService.class
+com\paiagent\engine\tts\TTSProviderFactory.class
 com\paiagent\engine\FlowParser$FlowEdge.class
 com\paiagent\engine\executor\LLMNodeExecutor.class
 com\paiagent\node\entity\NodeDefinitionEntity.class
+com\paiagent\engine\tts\TTSResponse.class
+com\paiagent\engine\tts\AliyunTTSProvider.class
 com\paiagent\node\service\NodeDefinitionService.class
 com\paiagent\common\util\ExpressionUtil.class
 com\paiagent\workflow\controller\WorkflowController.class
@@ -37,8 +41,10 @@ com\paiagent\node\dto\NodeCategoryDTO.class
 com\paiagent\common\exception\BizException.class
 com\paiagent\node\controller\NodeDefinitionController.class
 com\paiagent\engine\executor\ToolNodeExecutor.class
+com\paiagent\engine\tts\TTSProvider.class
 com\paiagent\engine\WorkflowEngine.class
 com\paiagent\execution\repository\ExecutionRepository.class
+com\paiagent\engine\tts\MockTTSProvider.class
 com\paiagent\node\dto\NodeDefinitionDTO.class
 com\paiagent\workflow\service\WorkflowService.class
 com\paiagent\workflow\dto\WorkflowDTO.class

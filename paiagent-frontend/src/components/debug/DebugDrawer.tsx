@@ -123,23 +123,93 @@ export default function DebugDrawer({ onClose }: Props) {
                 <p className="text-green-600 font-medium mb-2">
                   执行成功 ({result.durationMs}ms)
                 </p>
-                <div className="text-gray-700 whitespace-pre-wrap text-xs">
+                <div className="text-gray-700 whitespace-pre-wrap text-xs mb-3">
                   {result.outputData}
                 </div>
-                {/* Audio player placeholder */}
-                {result.outputData && result.outputData.includes('/audio/') && (
-                  <div className="mt-3 p-2 bg-blue-50 rounded-lg">
-                    <p className="text-xs text-blue-600 font-medium mb-1">🎧 AI 播客音频</p>
-                    <div className="bg-white rounded p-2 text-xs text-gray-500">
-                      音频 URL: {result.outputData}
-                      <br />
-                      <em>(Mock 模式 - 实际音频播放将在对接真实 API 后可用)</em>
-                    </div>
-                  </div>
-                )}
+                {/* Audio player for TTS output */}
+                {(() => {
+                  const audioUrl = extractAudioUrl(result.outputData);
+                  return audioUrl ? <AudioPlayer audioUrl={audioUrl} /> : null;
+                })()}
               </div>
             )}
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Helper function to extract audio URL from output
+function extractAudioUrl(output: string): string | null {
+  // Try to match common audio URL patterns
+  const patterns = [
+    /https?:\/\/[^\s"]+\.mp3/,
+    /https?:\/\/[^\s"]+\/audio\/[^\s"]+\.(mp3|wav|m4a)/,
+    /\/api\/mock\/audio\/[^\s"]+\.(mp3|wav|m4a)/,
+  ];
+
+  for (const pattern of patterns) {
+    const match = output.match(pattern);
+    if (match) {
+      return match[0];
+    }
+  }
+  return null;
+}
+
+// Audio Player Component
+function AudioPlayer({ audioUrl }: { audioUrl: string }) {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleEnded = () => {
+    setIsLoading(false);
+  };
+
+  const handleError = () => {
+    setIsLoading(false);
+    setError('音频加载失败');
+  };
+
+  return (
+    <div className="mt-3 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
+      <div className="flex items-center gap-2 mb-2">
+        <span className="text-lg">🎧</span>
+        <p className="text-xs text-blue-800 font-medium">AI 生成的音频</p>
+      </div>
+
+      <div className="bg-white rounded-lg p-3 shadow-sm">
+        <audio
+          src={audioUrl}
+          onPlay={() => setIsLoading(false)}
+          onEnded={handleEnded}
+          onError={handleError}
+          controls
+          className="w-full"
+          preload="metadata"
+        >
+          您的浏览器不支持音频播放
+        </audio>
+
+        {isLoading && (
+          <div className="mt-2 text-xs text-gray-500 flex items-center gap-1">
+            <span className="animate-spin">⏳</span>
+            <span>加载中...</span>
+          </div>
+        )}
+
+        {error && (
+          <div className="mt-2 text-xs text-red-500 flex items-center gap-1">
+            <span>⚠️</span>
+            <span>{error}</span>
+          </div>
+        )}
+
+        <div className="mt-2 pt-2 border-t border-gray-100">
+          <p className="text-xs text-gray-500 truncate" title={audioUrl}>
+            {audioUrl}
+          </p>
         </div>
       </div>
     </div>

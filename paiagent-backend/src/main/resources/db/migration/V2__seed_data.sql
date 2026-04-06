@@ -21,5 +21,5 @@ INSERT INTO node_definitions (node_key, node_type, label, category, icon_url, co
  '{"provider":"zhipu","model":"glm-4","temperature":0.7}', 4),
 
 ('voice_synthesis', 'TOOL', '超拟人音频合成', '工具节点', '/icons/voice.png',
- '{"toolType":"voice_synthesis","voices":["male-1","female-1","narrator"]}',
- '{"toolType":"voice_synthesis","voice":"narrator","speed":1.0}', 10);
+ '{"toolType":"voice_synthesis","voices":["Cherry","Serena","Ethan"],"languageTypes":["Auto"]}',
+ '{"toolType":"voice_synthesis","apiKey":"","modelName":"qwen3-tts-flash","inputParameters":[{"name":"text","parameterType":"reference","value":""},{"name":"voice","parameterType":"input","value":"Cherry"},{"name":"language_type","parameterType":"input","value":"Auto"}],"outputParameters":[{"name":"audioUrl","type":"string","description":"生成的音频URL"}]}', 10);
