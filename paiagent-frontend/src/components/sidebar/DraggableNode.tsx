@@ -22,10 +22,10 @@ export default function DraggableNode({ node }: Props) {
     <div
       draggable
       onDragStart={onDragStart}
-      className="flex items-center gap-2.5 px-3 py-2 bg-gray-50 rounded-lg cursor-grab hover:bg-blue-50 hover:shadow-sm transition-all border border-transparent hover:border-blue-200 active:cursor-grabbing"
+      className="flex items-center gap-2 px-2.5 py-2 bg-white rounded-lg cursor-grab hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 hover:shadow-md transition-all border border-gray-200 hover:border-blue-300 active:cursor-grabbing overflow-hidden"
     >
-      <span className="text-lg">{nodeIcons[node.nodeKey] || '📦'}</span>
-      <span className="text-sm text-gray-700">{node.label}</span>
+      <span className="text-base flex-shrink-0">{nodeIcons[node.nodeKey] || '📦'}</span>
+      <span className="text-sm text-gray-700 font-medium truncate">{node.label}</span>
     </div>
   );
 }

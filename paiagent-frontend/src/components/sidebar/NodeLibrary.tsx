@@ -30,15 +30,21 @@ export default function NodeLibrary() {
   ];
 
   return (
-    <div className="p-4">
-      <h2 className="text-base font-semibold text-gray-800 mb-3">节点库</h2>
-      <div className="space-y-4">
+    <div className="p-4 h-full overflow-y-auto">
+      <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+        <span className="text-xl">📚</span>
+        节点库
+      </h2>
+      <div className="space-y-5">
         {displayCategories.map((cat) => (
           <NodeCategoryGroup key={cat.category} category={cat} />
         ))}
       </div>
-      <div className="mt-6 text-xs text-gray-400 text-center">
-        拖拽节点到画布中使用
+      <div className="mt-6 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-100">
+        <p className="text-xs text-gray-600 text-center flex items-center justify-center gap-1">
+          <span>💡</span>
+          <span>拖拽节点到画布中使用</span>
+        </p>
       </div>
     </div>
   );

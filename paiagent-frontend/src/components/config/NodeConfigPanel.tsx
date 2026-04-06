@@ -1,5 +1,5 @@
 import { useFlowStore } from '../../store/useFlowStore';
-import type { NodeData, OutputMapping } from '../../types/flow';
+import type { NodeData, OutputMapping, InputParameter, OutputParameter } from '../../types/flow';
 
 export default function NodeConfigPanel() {
   const { nodes, selectedNodeId, updateNodeData } = useFlowStore();
@@ -35,7 +35,7 @@ export default function NodeConfigPanel() {
 
       {/* Type-specific config */}
       {selectedNode.type === 'llm' && (
-        <LLMConfig nodeData={nodeData} onUpdate={(data) => updateNodeData(selectedNode.id, data)} />
+        <LLMConfig nodeData={nodeData} allNodes={nodes} onUpdate={(data) => updateNodeData(selectedNode.id, data)} />
       )}
       {selectedNode.type === 'tool' && (
         <ToolConfig nodeData={nodeData} onUpdate={(data) => updateNodeData(selectedNode.id, data)} />
@@ -103,7 +103,7 @@ function InputConfig({ nodeData, onUpdate }: { nodeData: NodeData; onUpdate: (da
   );
 }
 
-function LLMConfig({ nodeData, onUpdate }: { nodeData: NodeData; onUpdate: (data: Partial<NodeData>) => void }) {
+function LLMConfig({ nodeData, allNodes, onUpdate }: { nodeData: NodeData; allNodes: Array<{ id: string; data: NodeData; type?: string }>; onUpdate: (data: Partial<NodeData>) => void }) {
   const models: Record<string, string[]> = {
     deepseek: ['deepseek-chat', 'deepseek-coder'],
     qwen: ['qwen-turbo', 'qwen-plus', 'qwen-max'],
@@ -112,6 +112,42 @@ function LLMConfig({ nodeData, onUpdate }: { nodeData: NodeData; onUpdate: (data
   };
 
   const availableModels = models[nodeData.provider || ''] || ['default'];
+  const isDeepSeek = nodeData.provider === 'deepseek' || nodeData.nodeKey === 'deepseek';
+
+  // Build reference options from all upstream nodes (excluding output nodes)
+  const refOptions: string[] = [];
+  for (const node of allNodes) {
+    if (node.type === 'output') continue;
+    const label = (node.data as NodeData).label;
+    if (node.type === 'input') {
+      const varName = (node.data as NodeData).inputVariableName || 'user_input';
+      refOptions.push(`${label}.${varName}`);
+    }
+    if (node.type === 'llm') {
+      refOptions.push(`${label}.text`);
+    }
+    if (node.type === 'tool') {
+      refOptions.push(`${label}.audioUrl`);
+      refOptions.push(`${label}.text`);
+    }
+  }
+
+  const inputParams = nodeData.inputParameters || [{ name: 'input', parameterType: 'reference' as const, value: '' }];
+
+  const updateInputParam = (index: number, field: keyof InputParameter, value: string) => {
+    const updated = [...inputParams];
+    updated[index] = { ...updated[index], [field]: value };
+    onUpdate({ inputParameters: updated });
+  };
+
+  const addInputParam = () => {
+    onUpdate({ inputParameters: [...inputParams, { name: '', parameterType: 'reference' as const, value: '' }] });
+  };
+
+  const removeInputParam = (index: number) => {
+    const updated = inputParams.filter((_, i) => i !== index);
+    onUpdate({ inputParameters: updated.length > 0 ? updated : [{ name: '', parameterType: 'reference' as const, value: '' }] });
+  };
 
   return (
     <div className="space-y-4">
@@ -119,6 +155,33 @@ function LLMConfig({ nodeData, onUpdate }: { nodeData: NodeData; onUpdate: (data
         <label className="text-xs text-gray-500 block mb-1">提供商</label>
         <div className="text-sm font-medium text-gray-700 bg-gray-50 px-2 py-1.5 rounded">{nodeData.provider || nodeData.nodeKey}</div>
       </div>
+
+      {/* DeepSeek 专属配置 */}
+      {isDeepSeek && (
+        <>
+          <div>
+            <label className="text-xs text-gray-500 block mb-1">接口地址</label>
+            <input
+              type="text"
+              value={nodeData.apiUrl || ''}
+              onChange={(e) => onUpdate({ apiUrl: e.target.value })}
+              className="w-full text-sm border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-400"
+              placeholder="https://api.deepseek.com/v1"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-gray-500 block mb-1">API 密钥</label>
+            <input
+              type="password"
+              value={nodeData.apiKey || ''}
+              onChange={(e) => onUpdate({ apiKey: e.target.value })}
+              className="w-full text-sm border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-400"
+              placeholder="sk-..."
+            />
+          </div>
+        </>
+      )}
+
       <div>
         <label className="text-xs text-gray-500 block mb-1">模型</label>
         <select
@@ -131,15 +194,85 @@ function LLMConfig({ nodeData, onUpdate }: { nodeData: NodeData; onUpdate: (data
           ))}
         </select>
       </div>
+
+      {/* Input Parameters - 动态输入参数 */}
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <label className="text-xs text-gray-500 font-medium">输入参数</label>
+          <button onClick={addInputParam} className="text-xs text-blue-500 hover:text-blue-600">+ 添加</button>
+        </div>
+        {inputParams.map((param, i) => (
+          <div key={i} className="flex gap-1.5 mb-2 items-start">
+            <div className="flex-1 space-y-1.5">
+              <input
+                value={param.name}
+                onChange={(e) => updateInputParam(i, 'name', e.target.value)}
+                className="w-full text-xs border border-gray-200 rounded px-1.5 py-1 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                placeholder="参数名"
+              />
+              <select
+                value={param.parameterType}
+                onChange={(e) => updateInputParam(i, 'parameterType', e.target.value as 'input' | 'reference')}
+                className="w-full text-xs border border-gray-200 rounded px-1 py-1 focus:outline-none focus:ring-1 focus:ring-blue-400"
+              >
+                <option value="input">输入</option>
+                <option value="reference">引用</option>
+              </select>
+              {param.parameterType === 'input' ? (
+                <input
+                  value={param.value}
+                  onChange={(e) => updateInputParam(i, 'value', e.target.value)}
+                  className="w-full text-xs border border-gray-200 rounded px-1.5 py-1 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                  placeholder="手动输入值"
+                />
+              ) : (
+                <select
+                  value={param.value}
+                  onChange={(e) => updateInputParam(i, 'value', e.target.value)}
+                  className="w-full text-xs border border-gray-200 rounded px-1 py-1 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                >
+                  <option value="">选择引用</option>
+                  {refOptions.map((opt) => (
+                    <option key={opt} value={opt}>{opt}</option>
+                  ))}
+                </select>
+              )}
+            </div>
+            <button
+              onClick={() => removeInputParam(i)}
+              className="text-red-400 hover:text-red-600 px-1 py-1 text-xs"
+              title="删除"
+            >
+              ×
+            </button>
+          </div>
+        ))}
+      </div>
+
       <div>
         <label className="text-xs text-gray-500 block mb-1">System Prompt</label>
         <textarea
           value={nodeData.systemPrompt || ''}
           onChange={(e) => onUpdate({ systemPrompt: e.target.value })}
-          className="w-full text-sm border border-gray-200 rounded-lg px-2 py-1.5 h-24 resize-none focus:outline-none focus:ring-1 focus:ring-blue-400"
+          className="w-full text-sm border border-gray-200 rounded-lg px-2 py-1.5 h-20 resize-none focus:outline-none focus:ring-1 focus:ring-blue-400"
           placeholder="你是一个有帮助的AI助手..."
         />
       </div>
+
+      {/* User Prompt - 用户提示词 */}
+      <div>
+        <label className="text-xs text-gray-500 block mb-1">用户提示词</label>
+        <textarea
+          value={nodeData.userPrompt || ''}
+          onChange={(e) => onUpdate({ userPrompt: e.target.value })}
+          className="w-full text-sm border border-gray-200 rounded-lg px-2 py-1.5 h-20 resize-none focus:outline-none focus:ring-1 focus:ring-blue-400"
+          placeholder="请输入您的内容：{{input}}"
+        />
+        <p className="text-xs text-gray-400 mt-1">
+          使用 {'{{'}参数名{'}'}  引用上面定义的参数，例如 {'{{input}}'}
+        </p>
+      </div>
+
       <div>
         <label className="text-xs text-gray-500 block mb-1">Temperature: {nodeData.temperature ?? 0.7}</label>
         <input
@@ -152,6 +285,69 @@ function LLMConfig({ nodeData, onUpdate }: { nodeData: NodeData; onUpdate: (data
           className="w-full"
         />
       </div>
+
+      {/* Output Parameters - 输出参数 */}
+      <OutputParametersConfig nodeData={nodeData} onUpdate={onUpdate} />
+    </div>
+  );
+}
+
+function OutputParametersConfig({ nodeData, onUpdate }: { nodeData: NodeData; onUpdate: (data: Partial<NodeData>) => void }) {
+  const outputParams = nodeData.outputParameters || [{ name: 'text', type: 'string', description: '模型生成的文本内容' }];
+
+  const updateParam = (index: number, field: keyof OutputParameter, value: string) => {
+    const updated = [...outputParams];
+    updated[index] = { ...updated[index], [field]: value };
+    onUpdate({ outputParameters: updated });
+  };
+
+  const addParam = () => {
+    onUpdate({ outputParameters: [...outputParams, { name: '', type: 'string', description: '' }] });
+  };
+
+  const removeParam = (index: number) => {
+    const updated = outputParams.filter((_, i) => i !== index);
+    onUpdate({ outputParameters: updated.length > 0 ? updated : [{ name: '', type: 'string', description: '' }] });
+  };
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-2">
+        <label className="text-xs text-gray-500 font-medium">输出参数</label>
+        <button onClick={addParam} className="text-xs text-blue-500 hover:text-blue-600">+ 添加</button>
+      </div>
+      {outputParams.map((param, i) => (
+        <div key={i} className="flex gap-1.5 mb-2 items-start">
+          <div className="flex-1 space-y-1.5">
+            <input
+              value={param.name}
+              onChange={(e) => updateParam(i, 'name', e.target.value)}
+              className="w-full text-xs border border-gray-200 rounded px-1.5 py-1 focus:outline-none focus:ring-1 focus:ring-blue-400"
+              placeholder="变量名"
+            />
+            <select
+              value={param.type}
+              onChange={(e) => updateParam(i, 'type', e.target.value)}
+              className="w-full text-xs border border-gray-200 rounded px-1 py-1 focus:outline-none focus:ring-1 focus:ring-blue-400"
+            >
+              <option value="string">String</option>
+            </select>
+            <input
+              value={param.description || ''}
+              onChange={(e) => updateParam(i, 'description', e.target.value)}
+              className="w-full text-xs border border-gray-200 rounded px-1.5 py-1 focus:outline-none focus:ring-1 focus:ring-blue-400"
+              placeholder="描述（可选）"
+            />
+          </div>
+          <button
+            onClick={() => removeParam(i)}
+            className="text-red-400 hover:text-red-600 px-1 py-1 text-xs"
+            title="删除"
+          >
+            ×
+          </button>
+        </div>
+      ))}
     </div>
   );
 }

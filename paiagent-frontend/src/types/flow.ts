@@ -23,7 +23,12 @@ export interface NodeData extends Record<string, unknown> {
   // LLM-specific
   provider?: string;
   model?: string;
+  apiUrl?: string;
+  apiKey?: string;
   systemPrompt?: string;
+  userPrompt?: string;
+  inputParameters?: InputParameter[];
+  outputParameters?: OutputParameter[];
   temperature?: number;
   // Tool-specific
   toolType?: string;
@@ -38,6 +43,18 @@ export interface OutputMapping {
   parameterType: 'input' | 'reference';
   mode: 'reference' | 'static';
   value: string;
+}
+
+export interface InputParameter {
+  name: string;
+  parameterType: 'input' | 'reference';
+  value: string;
+}
+
+export interface OutputParameter {
+  name: string;
+  type: string;
+  description?: string;
 }
 
 export interface FlowEdge {

@@ -15,17 +15,18 @@ export default function NodeCategoryGroup({ category }: Props) {
   const [expanded, setExpanded] = useState(true);
 
   return (
-    <div>
+    <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-100">
       <button
         onClick={() => setExpanded(!expanded)}
-        className="flex items-center gap-1.5 w-full text-left text-sm font-medium text-gray-600 hover:text-gray-800 transition-colors"
+        className="flex items-center gap-2 w-full text-left text-sm font-semibold text-gray-700 hover:text-blue-600 transition-colors"
       >
-        <span className={`transition-transform text-xs ${expanded ? 'rotate-90' : ''}`}>&#9654;</span>
-        <span>{categoryIcons[category.category] || '📦'}</span>
+        <span className={`transition-transform duration-200 text-xs ${expanded ? 'rotate-90' : ''}`}>&#9654;</span>
+        <span className="text-base">{categoryIcons[category.category] || '📦'}</span>
         <span>{category.category}</span>
+        <span className="ml-auto text-xs text-gray-400 font-normal">{category.nodes.length}个</span>
       </button>
       {expanded && (
-        <div className="mt-2 space-y-1.5 ml-1">
+        <div className="mt-3 space-y-2">
           {category.nodes.map((node) => (
             <DraggableNode key={node.nodeKey} node={node} />
           ))}
