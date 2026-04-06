@@ -45,8 +45,37 @@ public class OutputNodeExecutor implements NodeExecutor {
         }
 
         // Process response template: "{{output}}"
-        String responseTemplate = (String) nodeData.getOrDefault("responseTemplate", "");
-        String finalResponse = ExpressionUtil.resolveTemplate(responseTemplate, resolvedOutputs);
+        String responseTemplate = (String) nodeData.get("responseTemplate");
+        String finalResponse;
+        
+        if (responseTemplate == null || responseTemplate.trim().isEmpty()) {
+            // If no template, try to get text from upstream nodes
+            if (!resolvedOutputs.isEmpty()) {
+                // Use the first output parameter as response
+                finalResponse = String.valueOf(resolvedOutputs.values().iterator().next());
+                log.info("OutputNode [{}] using resolved output: {}", nodeId, finalResponse.substring(0, Math.min(50, finalResponse.length())));
+            } else {
+                // Try to find text output from any upstream node
+                finalResponse = context.findUpstreamTextOutput();
+                if (finalResponse == null || finalResponse.isEmpty()) {
+                    log.warn("OutputNode [{}] no upstream text found, returning empty", nodeId);
+                    finalResponse = "";
+                } else {
+                    log.info("OutputNode [{}] found upstream text: {}", nodeId, finalResponse.substring(0, Math.min(50, finalResponse.length())));
+                }
+            }
+        } else {
+            // Template is configured but might be invalid (e.g., "{{}}" or "{{invalid}}")
+            finalResponse = ExpressionUtil.resolveTemplate(responseTemplate, resolvedOutputs);
+            if (finalResponse == null || finalResponse.trim().isEmpty()) {
+                log.warn("OutputNode [{}] template '{}' resolved to empty, trying upstream text", nodeId, responseTemplate);
+                finalResponse = context.findUpstreamTextOutput();
+                if (finalResponse == null) {
+                    finalResponse = "";
+                }
+            }
+            log.info("OutputNode [{}] resolved template: {}", nodeId, finalResponse.substring(0, Math.min(50, finalResponse.length())));
+        }
 
         Map<String, Object> outputs = new HashMap<>(resolvedOutputs);
         outputs.put("__response__", finalResponse);

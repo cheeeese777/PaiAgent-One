@@ -48,8 +48,57 @@ export default function NodeConfigPanel() {
         />
       )}
       {selectedNode.type === 'input' && (
-        <div className="text-sm text-gray-500">输入节点接收用户调试输入，无需额外配置。</div>
+        <InputConfig nodeData={nodeData} onUpdate={(data) => updateNodeData(selectedNode.id, data)} />
       )}
+    </div>
+  );
+}
+
+function InputConfig({ nodeData, onUpdate }: { nodeData: NodeData; onUpdate: (data: Partial<NodeData>) => void }) {
+  return (
+    <div className="space-y-4">
+      <div>
+        <label className="text-xs text-gray-500 block mb-1">变量名</label>
+        <input
+          type="text"
+          value={nodeData.inputVariableName || 'user_input'}
+          onChange={(e) => onUpdate({ inputVariableName: e.target.value })}
+          className="w-full text-sm border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-400"
+          placeholder="user_input"
+        />
+      </div>
+      <div>
+        <label className="text-xs text-gray-500 block mb-1">变量类型</label>
+        <select
+          value={nodeData.inputVariableType || 'String'}
+          onChange={(e) => onUpdate({ inputVariableType: e.target.value })}
+          className="w-full text-sm border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-400"
+        >
+          <option value="String">String</option>
+          <option value="Number">Number</option>
+          <option value="Boolean">Boolean</option>
+          <option value="Object">Object</option>
+        </select>
+      </div>
+      <div>
+        <label className="text-xs text-gray-500 block mb-1">描述</label>
+        <textarea
+          value={nodeData.inputDescription || '用户本轮的输入内容'}
+          onChange={(e) => onUpdate({ inputDescription: e.target.value })}
+          className="w-full text-sm border border-gray-200 rounded-lg px-2 py-1.5 h-20 resize-none focus:outline-none focus:ring-1 focus:ring-blue-400"
+          placeholder="用户本轮的输入内容"
+        />
+      </div>
+      <div className="flex items-center gap-2">
+        <input
+          type="checkbox"
+          id="input-required"
+          checked={nodeData.inputRequired ?? true}
+          onChange={(e) => onUpdate({ inputRequired: e.target.checked })}
+          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+        />
+        <label htmlFor="input-required" className="text-sm text-gray-700">必要</label>
+      </div>
     </div>
   );
 }
@@ -145,13 +194,17 @@ function OutputConfig({
   allNodes: Array<{ id: string; data: NodeData; type?: string }>;
   onUpdate: (data: Partial<NodeData>) => void;
 }) {
-  const mappings: OutputMapping[] = nodeData.outputMappings || [{ name: 'output', mode: 'reference', value: '' }];
+  const mappings = nodeData.outputMappings || [{ name: 'output', parameterType: 'reference' as const, mode: 'reference' as const, value: '' }];
 
   // Build reference options from upstream nodes
   const refOptions: string[] = [];
   for (const node of allNodes) {
-    if (node.type === 'output' || node.type === 'input') continue;
+    if (node.type === 'output') continue;
     const label = (node.data as NodeData).label;
+    if (node.type === 'input') {
+      const varName = (node.data as NodeData).inputVariableName || 'user_input';
+      refOptions.push(`${label}.${varName}`);
+    }
     if (node.type === 'llm') {
       refOptions.push(`${label}.text`);
     }
@@ -161,14 +214,19 @@ function OutputConfig({
     }
   }
 
-  const updateMapping = (index: number, field: keyof OutputMapping, value: string) => {
+  const updateMapping = (index: number, field: keyof typeof mappings[number], value: string) => {
     const updated = [...mappings];
     updated[index] = { ...updated[index], [field]: value };
     onUpdate({ outputMappings: updated });
   };
 
   const addMapping = () => {
-    onUpdate({ outputMappings: [...mappings, { name: '', mode: 'reference', value: '' }] });
+    onUpdate({ outputMappings: [...mappings, { name: '', parameterType: 'reference' as const, mode: 'reference' as const, value: '' }] });
+  };
+
+  const removeMapping = (index: number) => {
+    const updated = mappings.filter((_, i) => i !== index);
+    onUpdate({ outputMappings: updated.length > 0 ? updated : [{ name: '', parameterType: 'reference' as const, mode: 'reference' as const, value: '' }] });
   };
 
   return (
@@ -179,40 +237,49 @@ function OutputConfig({
           <button onClick={addMapping} className="text-xs text-blue-500 hover:text-blue-600">+ 添加</button>
         </div>
         {mappings.map((mapping, i) => (
-          <div key={i} className="flex gap-1.5 mb-2 items-center">
-            <input
-              value={mapping.name}
-              onChange={(e) => updateMapping(i, 'name', e.target.value)}
-              className="w-20 text-xs border border-gray-200 rounded px-1.5 py-1 focus:outline-none focus:ring-1 focus:ring-blue-400"
-              placeholder="名称"
-            />
-            <select
-              value={mapping.mode}
-              onChange={(e) => updateMapping(i, 'mode', e.target.value as 'reference' | 'static')}
-              className="text-xs border border-gray-200 rounded px-1 py-1 focus:outline-none focus:ring-1 focus:ring-blue-400"
-            >
-              <option value="reference">引用</option>
-              <option value="static">固定值</option>
-            </select>
-            {mapping.mode === 'reference' ? (
-              <select
-                value={mapping.value}
-                onChange={(e) => updateMapping(i, 'value', e.target.value)}
-                className="flex-1 text-xs border border-gray-200 rounded px-1 py-1 focus:outline-none focus:ring-1 focus:ring-blue-400"
-              >
-                <option value="">选择引用</option>
-                {refOptions.map((opt) => (
-                  <option key={opt} value={opt}>{opt}</option>
-                ))}
-              </select>
-            ) : (
+          <div key={i} className="flex gap-1.5 mb-2 items-start">
+            <div className="flex-1 space-y-1.5">
               <input
-                value={mapping.value}
-                onChange={(e) => updateMapping(i, 'value', e.target.value)}
-                className="flex-1 text-xs border border-gray-200 rounded px-1.5 py-1 focus:outline-none focus:ring-1 focus:ring-blue-400"
-                placeholder="固定值"
+                value={mapping.name}
+                onChange={(e) => updateMapping(i, 'name', e.target.value)}
+                className="w-full text-xs border border-gray-200 rounded px-1.5 py-1 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                placeholder="参数名"
               />
-            )}
+              <select
+                value={mapping.parameterType}
+                onChange={(e) => updateMapping(i, 'parameterType', e.target.value as 'input' | 'reference')}
+                className="w-full text-xs border border-gray-200 rounded px-1 py-1 focus:outline-none focus:ring-1 focus:ring-blue-400"
+              >
+                <option value="input">输入</option>
+                <option value="reference">引用</option>
+              </select>
+              {mapping.parameterType === 'input' ? (
+                <input
+                  value={mapping.value}
+                  onChange={(e) => updateMapping(i, 'value', e.target.value)}
+                  className="w-full text-xs border border-gray-200 rounded px-1.5 py-1 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                  placeholder="手动输入值"
+                />
+              ) : (
+                <select
+                  value={mapping.value}
+                  onChange={(e) => updateMapping(i, 'value', e.target.value)}
+                  className="w-full text-xs border border-gray-200 rounded px-1 py-1 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                >
+                  <option value="">选择引用</option>
+                  {refOptions.map((opt) => (
+                    <option key={opt} value={opt}>{opt}</option>
+                  ))}
+                </select>
+              )}
+            </div>
+            <button
+              onClick={() => removeMapping(i)}
+              className="text-red-400 hover:text-red-600 px-1 py-1 text-xs"
+              title="删除"
+            >
+              ×
+            </button>
           </div>
         ))}
       </div>
@@ -226,16 +293,9 @@ function OutputConfig({
           placeholder="{{output}}"
         />
         <p className="text-xs text-gray-400 mt-1">
-          提示: 使用 {'{{ 参数名 }}'} 引用上面定义的参数
+          提示: 使用 {'{{'}参数名{'}'} 或 {'{{output}}'} 引用上面定义的参数
         </p>
       </div>
-
-      <button
-        onClick={() => { /* Already auto-saves via onUpdate */ }}
-        className="w-full py-2 bg-blue-500 text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors"
-      >
-        保存配置
-      </button>
     </div>
   );
 }

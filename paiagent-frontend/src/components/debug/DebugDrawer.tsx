@@ -26,7 +26,7 @@ export default function DebugDrawer({ onClose }: Props) {
     startExecution(0);
 
     try {
-      const res = await executionApi.run({ workflowId: flowId, inputData: inputText });
+      const res = await executionApi.run({ workflowId: flowId, inputData: JSON.stringify({ text: inputText }) });
 
       // Parse node results to update statuses
       if (res.nodeResults) {

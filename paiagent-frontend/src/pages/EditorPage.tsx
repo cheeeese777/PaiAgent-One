@@ -1,4 +1,5 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/useAuthStore';
 import { useFlowStore } from '../store/useFlowStore';
 import { useExecutionStore } from '../store/useExecutionStore';
@@ -10,13 +11,35 @@ import NodeConfigPanel from '../components/config/NodeConfigPanel';
 import DebugDrawer from '../components/debug/DebugDrawer';
 
 export default function EditorPage() {
+  const { flowId: urlFlowId } = useParams<{ flowId?: string }>();
+  const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
-  const { flowId, flowName, setFlowName, loadFlow, resetFlow, getFlowJson } = useFlowStore();
+  const { flowId, flowName, setFlowName, loadFlow, resetFlow, getFlowJson, setFlowId } = useFlowStore();
   const { isDebugging, setDebugging } = useExecutionStore();
   const [saving, setSaving] = useState(false);
   const [loadModalOpen, setLoadModalOpen] = useState(false);
   const [workflowList, setWorkflowList] = useState<Array<{id: number; name: string; updatedAt: string}>>([]);
+
+  // 当 URL 中的 flowId 变化时，自动加载工作流
+  useEffect(() => {
+    if (urlFlowId && !flowId) {
+      const id = parseInt(urlFlowId, 10);
+      if (!isNaN(id)) {
+        handleLoadWorkflowSilent(id);
+      }
+    }
+  }, [urlFlowId]);
+
+  const handleLoadWorkflowSilent = async (id: number) => {
+    try {
+      const wf = await workflowApi.get(id);
+      const flow = JSON.parse(wf.flowJson);
+      loadFlow(id, wf.name, flow.nodes || [], flow.edges || []);
+    } catch (e) {
+      console.error('Load workflow failed', e);
+    }
+  };
 
   const handleSave = useCallback(async () => {
     setSaving(true);
@@ -28,6 +51,8 @@ export default function EditorPage() {
         const created = await workflowApi.create({ name: flowName, flowJson: json });
         if (created.id) {
           useFlowStore.getState().setFlowId(created.id);
+          // 更新 URL，包含工作流 ID
+          navigate(`/editor/${created.id}`, { replace: true });
         }
       }
     } catch (e) {
@@ -35,11 +60,13 @@ export default function EditorPage() {
     } finally {
       setSaving(false);
     }
-  }, [flowId, flowName, getFlowJson]);
+  }, [flowId, flowName, getFlowJson, navigate]);
 
   const handleNew = useCallback(() => {
     resetFlow();
-  }, [resetFlow]);
+    // 清除 URL 中的 flowId
+    navigate('/editor', { replace: true });
+  }, [resetFlow, navigate]);
 
   const handleLoad = useCallback(async () => {
     try {
@@ -57,10 +84,12 @@ export default function EditorPage() {
       const flow = JSON.parse(wf.flowJson);
       loadFlow(id, wf.name, flow.nodes || [], flow.edges || []);
       setLoadModalOpen(false);
+      // 更新 URL
+      navigate(`/editor/${id}`, { replace: true });
     } catch (e) {
       console.error('Load workflow failed', e);
     }
-  }, [loadFlow]);
+  }, [loadFlow, navigate]);
 
   return (
     <div className="h-full flex flex-col">

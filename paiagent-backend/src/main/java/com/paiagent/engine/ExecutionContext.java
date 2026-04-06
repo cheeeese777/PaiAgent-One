@@ -51,4 +51,26 @@ public class ExecutionContext {
         }
         return outputs.get(field);
     }
+
+    /**
+     * Find text output from any upstream node (for simple workflows without output mappings)
+     */
+    public String findUpstreamTextOutput() {
+        // Look for nodes with 'text' field in their output
+        for (Map.Entry<String, Map<String, Object>> entry : nodeOutputs.entrySet()) {
+            String nodeId = entry.getKey();
+            // Skip internal nodes
+            if (nodeId.startsWith("__")) {
+                continue;
+            }
+            Map<String, Object> outputs = entry.getValue();
+            if (outputs.containsKey("text")) {
+                Object textValue = outputs.get("text");
+                if (textValue != null) {
+                    return String.valueOf(textValue);
+                }
+            }
+        }
+        return null;
+    }
 }

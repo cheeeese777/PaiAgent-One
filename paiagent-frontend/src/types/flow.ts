@@ -15,6 +15,11 @@ export interface FlowNode {
 export interface NodeData extends Record<string, unknown> {
   label: string;
   nodeKey: string;
+  // Input-specific
+  inputVariableName?: string;
+  inputVariableType?: string;
+  inputDescription?: string;
+  inputRequired?: boolean;
   // LLM-specific
   provider?: string;
   model?: string;
@@ -30,6 +35,7 @@ export interface NodeData extends Record<string, unknown> {
 
 export interface OutputMapping {
   name: string;
+  parameterType: 'input' | 'reference';
   mode: 'reference' | 'static';
   value: string;
 }

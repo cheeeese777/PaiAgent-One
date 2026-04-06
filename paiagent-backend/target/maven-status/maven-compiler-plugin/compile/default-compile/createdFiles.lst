@@ -5,6 +5,7 @@ com\paiagent\engine\NodeExecutorRegistry.class
 com\paiagent\auth\controller\AuthController.class
 com\paiagent\engine\FlowParser.class
 com\paiagent\config\WebSocketConfig.class
+com\paiagent\engine\llm\DeepSeekLLMProvider.class
 com\paiagent\execution\dto\ExecutionResponse.class
 com\paiagent\auth\filter\JwtAuthFilter.class
 com\paiagent\engine\FlowParser$3.class
