@@ -1,0 +1,54 @@
+package com.paiagent.engine;
+
+import java.util.HashMap;
+import java.util.Map;
+
+/**
+ * Shared data bus between node executions.
+ * Structure: nodeId -> { fieldName -> value }
+ */
+public class ExecutionContext {
+
+    private final Map<String, Map<String, Object>> nodeOutputs = new HashMap<>();
+    private final Map<String, String> labelToNodeId = new HashMap<>();
+
+    public void registerLabel(String label, String nodeId) {
+        labelToNodeId.put(label, nodeId);
+    }
+
+    public void putNodeOutput(String nodeId, Map<String, Object> outputs) {
+        nodeOutputs.put(nodeId, outputs);
+    }
+
+    public Map<String, Object> getNodeOutput(String nodeId) {
+        return nodeOutputs.getOrDefault(nodeId, Map.of());
+    }
+
+    public Map<String, String> getLabelToNodeId() {
+        return labelToNodeId;
+    }
+
+    public Map<String, Map<String, Object>> getAllOutputs() {
+        return nodeOutputs;
+    }
+
+    /**
+     * Resolve a reference like "通义千问.text" or "tool-1.audioUrl"
+     */
+    public Object resolveReference(String expression) {
+        if (expression == null || !expression.contains(".")) {
+            return null;
+        }
+        int dotIdx = expression.lastIndexOf('.');
+        String nodeRef = expression.substring(0, dotIdx).trim();
+        String field = expression.substring(dotIdx + 1).trim();
+
+        // Try label first, then direct nodeId
+        String nodeId = labelToNodeId.getOrDefault(nodeRef, nodeRef);
+        Map<String, Object> outputs = nodeOutputs.get(nodeId);
+        if (outputs == null) {
+            return null;
+        }
+        return outputs.get(field);
+    }
+}
